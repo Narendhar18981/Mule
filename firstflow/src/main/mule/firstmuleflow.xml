@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <http:listener-config name="firstmuleflow-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <http:request-config name="http-request-config">
+    <http:request-connection host="localhost" port="8081" />
+</http:request-config>
+<http:request-config name="http-request-config1">
+    <http:request-connection host="localhost" port="8082" />
+</http:request-config>
+    <apikit:config name="firstmuleflow-config" api="firstmuleflow.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="816f2f17-ef1a-4a19-bc5a-1aebc698024f" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	
+	<flow name="firstmuleflow-main">
+        <http:listener config-ref="firstmuleflow-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="firstmuleflow-config" />
+		<error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="firstmuleflow-console">
+        <http:listener config-ref="firstmuleflow-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="firstmuleflow-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="post:\add:firstmuleflow-config">
+		<ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"sum":attributes.queryParams.param1+attributes.queryParams.param2
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\fibonici:application\json:firstmuleflow-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+"result:1,1,2,3,5,8,13" as String {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\subtract:firstmuleflow-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+"result:30" as String {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+	<flow name="post:\order:firstmuleflowFlow" doc:id="97bf79c7-7e43-46e1-b69d-af1ea82402fd" >
+		<http:listener doc:name="Listener" doc:id="3e5d1ad6-f5ad-4226-bb80-d265f1c127e8" config-ref="HTTP_Listener_config" path="/order"/>
+		<logger level="INFO" doc:name="Logger" doc:id="7a4fa163-fd10-4640-9115-a49e76302314" message="Incomming order received"/>
+		<flow-ref doc:name="Flow Reference" doc:id="dff6e6e9-0dc8-475a-88f3-239800eac55c" name="process-order-flow"/>
+		<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;    status: "SUCCESS",&#10;    priority: vars.priority&#10;}]' doc:name="Set Payload" doc:id="27ffbec3-77b8-4924-a159-cef51eca2198" />
+	</flow>
+	<flow name="process-order-flow" doc:id="3d242d24-46d6-4cae-9b2b-ed826bc3b03b" >
+		<try doc:name="Try" doc:id="5c4a5eaa-b25e-4bd8-b2bd-99718cfabd51" >
+			<choice doc:name="Choice" doc:id="0c322516-2d0c-4f83-bb80-a7936cc61015" >
+				<when expression="#[payload.amount &gt; 0]">
+					<ee:transform doc:name="Transform Message" doc:id="eae5bce3-0fa8-42c1-b7f4-f37600f2dcf0" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    orderId: uuid(),
+    customer: payload.customer,
+    amount: payload.amount,
+    status: "VALID"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<choice doc:name="Choice" doc:id="6d771c0d-dd49-4d0f-be73-6bd4627e68a0" >
+						<when expression="#[payload.amount &gt; 500]">
+							<set-variable value="HIGH" doc:name="Set Variable" doc:id="282651f9-f363-4219-8c24-a5b06fd62974" variableName="priority"/>
+						</when>
+						<otherwise >
+							<set-variable value="NORMAL" doc:name="Set Variable" doc:id="f6a64d63-540f-4769-b813-e928ae6de556" variableName="priority"/>
+						</otherwise>
+					</choice>
+					<http:request doc:name="Request" doc:id="6071a31e-38c9-4aef-b0cf-fcd0a25f6ddc" method="POST" path="/external-system" config-ref="http-request-config1"/>
+				</when>
+			</choice>
+			<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c76f25e9-f310-4ea5-b77f-cd2cb1fc4fb7" >
+					<ee:transform doc:name="Transform Message" doc:id="4e3574ea-dbbf-41b1-a261-91b327ff8964" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  error: "Invalid Order"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="3378c305-fc2f-411e-affe-2c8dfe3bf2e8">
+				<ee:transform doc:name="Transform Message" doc:id="1b34d9a5-a7f9-47c9-a46c-99d4f3d82592">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  error: "Invalid Order"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="external-system-flow" doc:id="bceee1cb-62fd-4d23-a642-b35986cc847a" >
+		<http:listener doc:name="Listener" doc:id="e77c0e10-e860-433e-af6d-12a337184777" config-ref="HTTP_Listener_config" path="/external-system"/>
+		<logger level="INFO" doc:name="Logger" doc:id="b0014438-801c-4b58-bf22-13ec4de0febc" message="allocated successfully"/>
+		<set-payload value='#[{&#10;  "response": "stored successfully"&#10;}]' doc:name="Set Payload" doc:id="46757532-c3c2-443f-89b4-a283cb8e721c" />
+	</flow>
+</mule>

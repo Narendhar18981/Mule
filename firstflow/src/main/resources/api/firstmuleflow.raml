@@ -1,0 +1,82 @@
+#%RAML 1.0
+title: FirstMuleFlow
+
+resourceTypes:
+  Operation:
+    post:
+      queryParameters:
+        param1:
+          type: integer
+        param2:
+          type: integer
+      responses:
+        200:
+          body:
+            application/json:
+              example:
+                result: 30
+
+/add:
+  post:
+    queryParameters:
+      param1:
+        type: integer
+      param2:
+        type: integer
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              result: 30
+
+/subtract:
+  type: Operation
+
+/fibonici:
+  post:
+    body:
+      application/json:
+        type: object
+        properties:
+          length:
+            type: integer
+        example:
+          {
+            "length": 7
+          }
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              {
+                "result": [1,1,2,3,5,8,13]
+              }
+
+/orders:
+  post:
+    description: Create a new order
+    body:
+      application/json:
+        type: object
+        properties:
+          customer:
+            type: string
+            required: true
+          amount:
+            type: number
+            required: true
+        example:
+          {
+            "customer": "John",
+            "amount": 100
+          }
+    responses:
+      201:
+        body:
+          application/json:
+            example:
+              {
+                "message": "Order created successfully"
+              }
