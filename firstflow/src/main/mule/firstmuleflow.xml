@@ -13,7 +13,6 @@
     <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="816f2f17-ef1a-4a19-bc5a-1aebc698024f" >
 		<http:listener-connection host="0.0.0.0" port="8082" />
 	</http:listener-config>
-	
 	<flow name="firstmuleflow-main">
         <http:listener config-ref="firstmuleflow-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
@@ -166,20 +165,25 @@ output application/json
         </ee:transform>
     </flow>
 	<flow name="post:\order:firstmuleflowFlow" doc:id="97bf79c7-7e43-46e1-b69d-af1ea82402fd" >
-		<http:listener doc:name="Listener" doc:id="3e5d1ad6-f5ad-4226-bb80-d265f1c127e8" config-ref="HTTP_Listener_config" path="/order"/>
+		<http:listener doc:name="Listener" doc:id="3e5d1ad6-f5ad-4226-bb80-d265f1c127e8" config-ref="firstmuleflow-httpListenerConfig" path="/order"/>
 		<logger level="INFO" doc:name="Logger" doc:id="7a4fa163-fd10-4640-9115-a49e76302314" message="Incomming order received"/>
 		<flow-ref doc:name="Flow Reference" doc:id="dff6e6e9-0dc8-475a-88f3-239800eac55c" name="process-order-flow"/>
 		<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;    status: "SUCCESS",&#10;    priority: vars.priority&#10;}]' doc:name="Set Payload" doc:id="27ffbec3-77b8-4924-a159-cef51eca2198" />
 	</flow>
-	<flow name="process-order-flow" doc:id="3d242d24-46d6-4cae-9b2b-ed826bc3b03b" >
-		<try doc:name="Try" doc:id="5c4a5eaa-b25e-4bd8-b2bd-99718cfabd51" >
-			<choice doc:name="Choice" doc:id="0c322516-2d0c-4f83-bb80-a7936cc61015" >
+	<flow name="external-system-flow" doc:id="bceee1cb-62fd-4d23-a642-b35986cc847a" >
+		<http:listener doc:name="Listener" doc:id="e77c0e10-e860-433e-af6d-12a337184777" config-ref="HTTP_Listener_config" path="/external-system"/>
+		<logger level="INFO" doc:name="Logger" doc:id="b0014438-801c-4b58-bf22-13ec4de0febc" message="allocated successfully"/>
+		<set-payload value='#[{&#10;  "response": "stored successfully"&#10;}]' doc:name="Set Payload" doc:id="46757532-c3c2-443f-89b4-a283cb8e721c" />
+	</flow>
+	<!-- <flow name="process-order-flow" doc:id="3d242d24-46d6-4cae-9b2b-ed826bc3b03b">
+		<try doc:name="Try" doc:id="5c4a5eaa-b25e-4bd8-b2bd-99718cfabd51">
+			<choice doc:name="Choice" doc:id="0c322516-2d0c-4f83-bb80-a7936cc61015">
 				<when expression="#[payload.amount &gt; 0]">
-					<ee:transform doc:name="Transform Message" doc:id="eae5bce3-0fa8-42c1-b7f4-f37600f2dcf0" >
-						<ee:message >
-							<ee:set-payload ><![CDATA[%dw 2.0
+					<ee:transform doc:name="Transform Message" doc:id="eae5bce3-0fa8-42c1-b7f4-f37600f2dcf0">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
+-&#45;&#45;
 {
     orderId: uuid(),
     customer: payload.customer,
@@ -188,24 +192,24 @@ output application/json
 }]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<choice doc:name="Choice" doc:id="6d771c0d-dd49-4d0f-be73-6bd4627e68a0" >
+					<choice doc:name="Choice" doc:id="6d771c0d-dd49-4d0f-be73-6bd4627e68a0">
 						<when expression="#[payload.amount &gt; 500]">
-							<set-variable value="HIGH" doc:name="Set Variable" doc:id="282651f9-f363-4219-8c24-a5b06fd62974" variableName="priority"/>
+							<set-variable value="HIGH" doc:name="Set Variable" doc:id="282651f9-f363-4219-8c24-a5b06fd62974" variableName="priority" />
 						</when>
-						<otherwise >
-							<set-variable value="NORMAL" doc:name="Set Variable" doc:id="f6a64d63-540f-4769-b813-e928ae6de556" variableName="priority"/>
+						<otherwise>
+							<set-variable value="NORMAL" doc:name="Set Variable" doc:id="f6a64d63-540f-4769-b813-e928ae6de556" variableName="priority" />
 						</otherwise>
 					</choice>
-					<http:request doc:name="Request" doc:id="6071a31e-38c9-4aef-b0cf-fcd0a25f6ddc" method="POST" path="/external-system" config-ref="http-request-config1"/>
+					<http:request doc:name="Request" doc:id="6071a31e-38c9-4aef-b0cf-fcd0a25f6ddc" method="POST" path="/external-system" config-ref="http-request-config1" />
 				</when>
 			</choice>
 			<error-handler>
-				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c76f25e9-f310-4ea5-b77f-cd2cb1fc4fb7" >
-					<ee:transform doc:name="Transform Message" doc:id="4e3574ea-dbbf-41b1-a261-91b327ff8964" >
-						<ee:message >
-							<ee:set-payload ><![CDATA[%dw 2.0
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c76f25e9-f310-4ea5-b77f-cd2cb1fc4fb7">
+					<ee:transform doc:name="Transform Message" doc:id="4e3574ea-dbbf-41b1-a261-91b327ff8964">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
+-&#45;&#45;
 {
   error: "Invalid Order"
 }]]></ee:set-payload>
@@ -220,7 +224,7 @@ output application/json
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
+-&#45;&#45;
 {
   error: "Invalid Order"
 }]]></ee:set-payload>
@@ -228,10 +232,5 @@ output application/json
 				</ee:transform>
 			</on-error-propagate>
 		</error-handler>
-	</flow>
-	<flow name="external-system-flow" doc:id="bceee1cb-62fd-4d23-a642-b35986cc847a" >
-		<http:listener doc:name="Listener" doc:id="e77c0e10-e860-433e-af6d-12a337184777" config-ref="HTTP_Listener_config" path="/external-system"/>
-		<logger level="INFO" doc:name="Logger" doc:id="b0014438-801c-4b58-bf22-13ec4de0febc" message="allocated successfully"/>
-		<set-payload value='#[{&#10;  "response": "stored successfully"&#10;}]' doc:name="Set Payload" doc:id="46757532-c3c2-443f-89b4-a283cb8e721c" />
-	</flow>
+	</flow> -->
 </mule>
